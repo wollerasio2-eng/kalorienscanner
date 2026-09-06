@@ -1,0 +1,44 @@
+name: Build KalorienScanner APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Create Skeleton and Build
+        run: |
+          mkdir temp_app
+          cd temp_app
+          flutter create --project-name kalorienscanner --org com.kalorien.app app
+          cd app
+          flutter pub add mobile_scanner http shared_preferences url_launcher
+          sed -i 's/minSdkVersion .*/minSdkVersion 21/g' android/app/build.gradle
+          sed -i 's/<application/<application android:usesCleartextTraffic="true"/g' android/app/src/main/AndroidManifest.xml
+          cp -f ../../lib/main.dart lib/main.dart
+          flutter build apk --debug
+          mkdir -p ../../output
+          cp build/app/outputs/flutter-apk/app-debug.apk ../../output/KalorienScanner.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: KalorienScanner-App
+          path: output/KalorienScanner.apk
+          
